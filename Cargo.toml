@@ -5,8 +5,3 @@ edition = "2021"
 
 [profile.release]
 strip = true
-
-[dependencies]
-std = { path = "../std" }
-#spin = "0.5.2"
-#lazy_static = { "version" = "1.0", "features" = ["spin_no_std"] }

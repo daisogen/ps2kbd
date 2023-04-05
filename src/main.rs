@@ -1,7 +1,7 @@
-#![no_std]
-#![no_main]
+#![feature(daisogen_api)]
 
-use core::arch::asm;
+use std::arch::asm;
+use std::daisogen::asm::{in8, out8};
 
 const KEYBOARD_IRQ: u8 = 1;
 const DATA_PORT: u16 = 0x60;
@@ -10,7 +10,7 @@ const COMMAND_PORT: u16 = 0x64;
 
 macro_rules! wait_input_buffer_empty {
     () => {
-        while (std::asm::in8(STATUS_PORT) & 2 != 0) {
+        while in8(STATUS_PORT) & 2 != 0 {
             unsafe {
                 asm!("pause");
             }
@@ -18,7 +18,6 @@ macro_rules! wait_input_buffer_empty {
     };
 }
 
-#[no_mangle]
 fn main() {
     // TODO: Check keyboard is present in ACPI
 
@@ -27,16 +26,16 @@ fn main() {
 
     // Enable keyboard
     wait_input_buffer_empty!();
-    std::asm::out8(COMMAND_PORT, 0xAE); // COMMAND_ENABLE_FIRST
+    out8(COMMAND_PORT, 0xAE); // COMMAND_ENABLE_FIRST
     wait_input_buffer_empty!();
-    std::asm::out8(COMMAND_PORT, 0xA8); // COMMAND_ENABLE_SECOND
+    out8(COMMAND_PORT, 0xA8); // COMMAND_ENABLE_SECOND
 
     // Set the handler for the vector
     std::daisogen::set_simple_vector(vec, handler as u64);
 
     // Discard pressed keys
-    std::asm::in8(STATUS_PORT);
-    std::asm::in8(DATA_PORT);
+    in8(STATUS_PORT);
+    in8(DATA_PORT);
 
     // All set
     std::daisogen::unmask(gsi);
@@ -46,14 +45,14 @@ fn main() {
 extern "C" fn handler() {
     // Handle key presses
     loop {
-        let status = std::asm::in8(STATUS_PORT);
+        let status = in8(STATUS_PORT);
         if status & 0x01 == 0 {
             // Nothing to do
             break;
         }
 
         // Key press!
-        let keycode = std::asm::in8(DATA_PORT);
+        let keycode = in8(DATA_PORT);
         std::daisogen::pd_call1("kbd_buffer_keycode", keycode as u64);
     }
 
